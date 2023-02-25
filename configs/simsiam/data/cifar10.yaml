@@ -1,0 +1,8 @@
+type: 'standard'
+base_dir: '/home/subhrangsu/contssl/continuous_ssl_problem/cifar10'
+train_filelist: '/home/subhrangsu/contssl/continuous_ssl_problem/cifar10/train.txt'
+val_filelist: '/home/subhrangsu/contssl/continuous_ssl_problem/cifar10/val.txt'
+insize: 224
+name: 'cifar10'
+n_seq_samples: -1
+shuffle: False

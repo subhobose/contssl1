@@ -1,0 +1,7 @@
+type: 'standard'
+base_dir: '/home/subhrangsu/contssl/continuous_ssl_problem/kcam/frames'
+train_filelist: 'datasets/lists/krishnacam_filelist.txt'
+val_filelist: ''
+insize: 224
+n_seq_samples: -1
+shuffle: False
