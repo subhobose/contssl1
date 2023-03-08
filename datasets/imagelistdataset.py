@@ -30,34 +30,25 @@ def decode_filename(fn):
 
 
 class KineticsSequentialDataset(data.Dataset):
-    """Dataset that reads videos"""
+    """Dataset that reads kinetics videos"""
     def __init__(self,
                  dirlist_fname,
                  base_dir='',
                  transforms=None,
-                 fname_fmt='{:03d}.jpg',#format for kcam
+                 fname_fmt='{:03d}.jpeg',
                  n_seq_samples=-1, sampling_method='consecutive'):
         """TODO: to be defined.
-
         :pair_filelist: TODO
-
         """
         data.Dataset.__init__(self)
         assert (os.path.exists(dirlist_fname)
                 ), '{} does not exist'.format(dirlist_fname)
-        countFramesDict = defaultdict(list)
         with open(dirlist_fname, 'r') as f:
             filedata = f.read().splitlines()
-            #print(filedata[0])
-            #print(base_dir)
-            for d in filedata:
-              countFramesDict[d.rsplit('/')[0]].append(d.rsplit('/')[1].split('.')[0])
             self.dirlist = torch.stack(
-                [encode_filename(base_dir+'/'+d) for d in countFramesDict.keys()])
-            #print(base_dir+'/'+filedata[0].rsplit('/')[0])
-            #recalculate number of frames for each directory for kcam
+                [encode_filename(base_dir+'/'+d.split(' ')[0]) for d in filedata])
             self.nframes_list = torch.tensor(
-                [len(d) for d in countFramesDict.values()])
+                [int(d.split(' ')[1]) for d in filedata])
             print([decode_filename(fn) for fn in self.dirlist[:10]])
 
         self.num_videos = len(self.dirlist)
@@ -107,12 +98,10 @@ class KineticsSequentialDataset(data.Dataset):
 
     def __getitem__(self, index):
         """TODO: Docstring for __getitem__.
-
         :index: TODO
         :returns: TODO
-
         """
-        MAX_TRIES = 50
+        MAX_TRIES = 2
         for i in range(MAX_TRIES):
             try:
                 fname = self.get_frame_filename(index)
@@ -126,6 +115,9 @@ class KineticsSequentialDataset(data.Dataset):
                         f'Aborting. Failed to load {MAX_TRIES} times in a row. Check {fname}'
                     )
                 print('Failed to load')
+                print("Printing filenames that cant be found {}".format(fname))
+                failedFileDirName = os.path.dirname(fname)
+                print("Printing video name that cant be found, to be removed {}".format(failedFileDirName))                
                 index = np.random.randint(len(self))
         meta = {}
         i = 0
@@ -151,12 +143,11 @@ class KineticsSequentialDataset(data.Dataset):
 
     def __len__(self):
         """TODO: Docstring for __len__.
-
         :f: TODO
         :returns: TODO
-
         """
         return self.vid_inds[-1]
+          
 
 
 class ClassSequentialDataset(data.Dataset):
@@ -286,7 +277,7 @@ class ClassSequentialDataset(data.Dataset):
 
 class ImageListDataset(data.Dataset):
     """Dataset that reads videos"""
-    def __init__(self, list_fname, base_dir='', transforms=None):
+    def __init__(self, list_fname, startIndex, endIndex, base_dir='', transforms=None):
         """TODO: to be defined.
 
         :pair_filelist: TODO
@@ -297,6 +288,7 @@ class ImageListDataset(data.Dataset):
             os.path.exists(list_fname)), '{} does not exist'.format(list_fname)
         with open(list_fname, 'r') as f:
             filedata = f.read().splitlines()
+            filedata = filedata[startIndex:endIndex]
             self.filelist = torch.stack(
                 [encode_filename(base_dir+"/"+d.split(' ')[0]) for d in filedata])
             print([decode_filename(fn) for fn in self.filelist[:10]])
