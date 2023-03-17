@@ -27,6 +27,9 @@ from utils import AverageMeter, ProgressMeter, adjust_learning_rate
 from utils import WindowAverageMeter, CheckpointManager
 
 from torch.utils.data import ConcatDataset
+import matplotlib.pyplot as plt
+import torchvision
+from torchvision.utils import save_image
 
 
 elps_time = time.time()
@@ -62,7 +65,7 @@ def main_worker(gpu, ngpus_per_node, args):
     print(model)
     model = model.to(device)
     if device == 'cuda':
-        net = torch.nn.DataParallel(model)
+        #net = torch.nn.DataParallel(model)
         cudnn.benchmark = True
     #if args.model.sync_bn and args.environment.gpu is not None:
      #   model = nn.SyncBatchNorm.convert_sync_batchnorm(model)
@@ -134,41 +137,47 @@ def main_worker(gpu, ngpus_per_node, args):
     
     
     trainfname = args.data.train_filelist
-    #trainingListSize
     
     with open(trainfname, 'r') as f:
         filedata = f.read().splitlines()
         trainingListSize = len(filedata)
     
-    slope, c = calculateLinearFunction(trainingListSize//args.optim.batch_size)
-    pval1 = calculateP(slope, c, 1)
-    pval2 = calculateP(slope, c, 250)
-        
-    #train_dataset = datasets.imagelistdataset.ImageListDataset(
-     #       trainfname,
-      #      startIndex=0, endIndex=trainingListSize,
-       #     base_dir=args.data.base_dir,
-        #    transforms=augmentation)
+    print("Total Number of Training Images {}".format(trainingListSize))
     
+    totBatches = trainingListSize//args.optim.batch_size
+    print("Total Number of Batches {}".format(totBatches))
     
+    slope, c = calculateLinearFunction(totBatches)  #based on total number of batches
     
-    train_dataset1 = datasets.imagelistdataset.ImageListDataset(
-            trainfname,
-            startIndex=0, endIndex=25000,
-            base_dir=args.data.base_dir,
-            transforms=createAugmentationWithP(pval1, args.data.insize, normalize))
+    #Linear Function
+    print("The linear probability function : y = {}*x + {} , y = probability value, x = total number of batches trained".format(slope,c))
     
-    train_dataset2 = datasets.imagelistdataset.ImageListDataset(
-            trainfname,
-            startIndex=25000, endIndex=trainingListSize,
-            base_dir=args.data.base_dir,
-            transforms=createAugmentationWithP(pval2, args.data.insize, normalize))
+    trainDataSetList = []
     
-    trainDataSetList = [train_dataset1, train_dataset2]
+    start = 0
+    for numBatches in range(1, totBatches+1):  #Batch 1 to 500
+        if numBatches%10 == 0:      #Every 10 batches (100*10 = 1000 images per dataset object)
+            pVal = calculateP(slope, c, numBatches)
+            #print("PVAL for this batch {}".format(pVal))
+            end = numBatches*args.optim.batch_size
+            #print("Start Index {}".format(start))
+            #print("End Index {}".format(end))
+            trainSet = datasets.imagelistdataset.ImageListDataset(
+                          trainfname,
+                          startIndex=start, endIndex=end,
+                          base_dir=args.data.base_dir,
+                          transforms=createAugmentationWithP(pVal, args.data.insize, normalize))
+            trainDataSetList.append(trainSet)
+            #print("Length of this subset {}".format(len(trainSet)))
+            start = end    
     
     train_dataset = ConcatDataset(trainDataSetList)
     
+    print(f'Dataset: {len(train_dataset)}')
+    
     train_sampler = ResumableRandomSampler(data_source=train_dataset)
+    print(f'Sampler: {len(train_sampler)}')
+    
     
     train_n_seq = args.data.n_seq_samples
     if args.model.buffer_type == 'none_noseq':
@@ -180,6 +189,8 @@ def main_worker(gpu, ngpus_per_node, args):
             drop_last=True,
             n_seq_samples=train_n_seq)
     
+    print(f'Batch Sampler: {len(batch_sampler)}')
+    
     train_loader = torch.utils.data.DataLoader(
         dataset=train_dataset,
         batch_sampler=batch_sampler,
@@ -187,6 +198,18 @@ def main_worker(gpu, ngpus_per_node, args):
         pin_memory=True,
         prefetch_factor=1)
     
+    #temp = next(iter(train_loaderWithoutAug))
+    #for i in range(10):
+      #testInput1.append(temp['input1'][i])
+      #testInput2.append(temp['input2'][i])
+        
+    #create traindatasets and insert trainloaders 1-10 for varying probabilities 
+      
+    #grid = torchvision.utils.make_grid(testInput1, nrow=10)
+    #grid2 = torchvision.utils.make_grid(testInput2, nrow=10)
+  
+    #imshow(grid)
+    #imshow(grid2)
         
     #if args.data.type == 'standard':
      #   train_dataset = datasets.imagelistdataset.ImageListDataset(
@@ -283,6 +306,7 @@ def main_worker(gpu, ngpus_per_node, args):
         args.optim.start_epoch = ckpt_manager.resume()
 
     # Train
+    
     for epoch in range(args.optim.start_epoch, args.optim.epochs):
         print('Train Epoch {}'.format(epoch))
         sys.stdout.flush()
@@ -340,8 +364,9 @@ def train(train_loader,
     world_size = torch.distributed.get_world_size(
     ) if torch.distributed.is_initialized() else 1
     
-    #print('here1')
+    batchNum = 1
     for data in train_loader:
+        batchFolder = 'batch'+str(batchNum)
         batch_i = train_loader.batch_sampler.advance_batches_seen()
 
         effective_epoch = epoch + (batch_i / len(train_loader))
@@ -352,8 +377,15 @@ def train(train_loader,
         lr_meter.update(lr)
 
         # measure data loading time
-        images = [data['input1'], data['input2']]
-        data_time.update(time.time() - end)
+        images = [data['input1'], data['input2']] 
+        # batch_size*channel*width*height, matplotlib has width*height*channel
+        mean, std, var = torch.mean(images[0]), torch.std(images[0]), torch.var(images[0]) #calculate for unnormalization 
+        unnormalizedTensor = unnormalize(images[0], mean, std)
+        for j in range(10):
+            img = unnormalizedTensor[j]
+            saveAsString = batchFolder+'img'+str(j+1)+'.png'
+            save_image(img, saveAsString)            
+        data_time.update(time.time() - end) 
         
         #print('here2')
         # send to cuda
@@ -368,6 +400,7 @@ def train(train_loader,
         loss_per_sample = -(criterion(p1, z2.detach()) +
                             criterion(p2, z1.detach())) * 0.5
         loss = loss_per_sample.mean()
+        writer.add_scalar("Loss/Batch", loss, batchNum)
         losses.update(loss.item(), images[0].size(0))
         with torch.no_grad():
             data['feature'] = torch.stack((z1, z2), 1).detach()
@@ -387,6 +420,7 @@ def train(train_loader,
                         stats['neighbor_similarity'].float().mean().item(),
                         stats['neighbor_similarity'].shape[0])
 
+        batchNum = batchNum + 1
         # compute gradient and do SGD step
         optimizer.zero_grad()
         loss.backward()
@@ -440,4 +474,13 @@ def createAugmentationWithP(pVal, insize, normalize):
         transforms.ToTensor(),
         normalize
     ])
+    
+def imshow(img):
+  #img = img / 2 + 0.5   # unnormalize
+  npimg = img.numpy()   # convert from tensor
+  plt.imshow(np.transpose(npimg, (1, 2, 0))) 
+  plt.show()
+
+def unnormalize(t, mean, std):
+  return t*std+mean
     

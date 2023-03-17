@@ -291,7 +291,7 @@ class ImageListDataset(data.Dataset):
             filedata = filedata[startIndex:endIndex]
             self.filelist = torch.stack(
                 [encode_filename(base_dir+"/"+d.split(' ')[0]) for d in filedata])
-            print([decode_filename(fn) for fn in self.filelist[:10]])
+            #print([decode_filename(fn) for fn in self.filelist[:10]])
 
         if not isinstance(transforms, list):
             transforms = [transforms]
