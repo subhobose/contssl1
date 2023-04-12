@@ -2,7 +2,7 @@ type: 'standard'
 base_dir: '/home/subhrangsu/contssl/continuous_ssl_problem/data'
 train_filelist: '/home/subhrangsu/contssl/continuous_ssl_problem/data/train.txt'
 val_filelist: '/home/subhrangsu/contssl/continuous_ssl_problem/data/val.txt'
-insize: 224
+insize: 32
 name: 'cifar10'
 n_seq_samples: -1
 shuffle: False

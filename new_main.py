@@ -81,8 +81,8 @@ class Worker:
         lincls_args = copy.deepcopy(args)
         main_worker(args.environment.gpu, ngpus_per_node, args)
         #print(args.lincls[lincls_key].eval_params.resume_epoch)
-        if args.lincls[lincls_key].eval_params.resume_epoch >= 0:
-            main_lincls_worker(args.environment.gpu, ngpus_per_node, args)
+        #if args.lincls[lincls_key].eval_params.resume_epoch >= 0:
+           # main_lincls_worker(args.environment.gpu, ngpus_per_node, args)
 
     def checkpoint(self, *args,
                    **kwargs) -> submitit.helpers.DelayedSubmission:
