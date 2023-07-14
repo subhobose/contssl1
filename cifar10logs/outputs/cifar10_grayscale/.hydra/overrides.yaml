@@ -1,0 +1,9 @@
+- data=cifar10
+- optim.lr=0.05
+- environment.data_dir=cifar10logs
+- environment.ngpu=4
+- environment.workers=40
+- lincls.imnet.eval_params.resume_epoch=${optim.epochs}
+- model/backbone=resnet18
+- logging.name=cifar10_grayscale
+- optim.epochs=1

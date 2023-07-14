@@ -1,0 +1,1 @@
+Logging is written both to stderr/stdout and to /home/subhrangsu/contssl/continuous_ssl_problem/cifar10logs/outputs/cifar10optaug/cifar10logs/submitit_train_logs/cifar10optaug/cifar10optaug/DEBUG_140107041039376_0_log.out/err. But call to print will only appear in the console.

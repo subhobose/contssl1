@@ -1,0 +1,125 @@
+data:
+  type: standard
+  base_dir: /home/subhrangsu/contssl/continuous_ssl_problem/data
+  train_filelist: /home/subhrangsu/contssl/continuous_ssl_problem/data/train.txt
+  val_filelist: /home/subhrangsu/contssl/continuous_ssl_problem/data/val.txt
+  insize: 224
+  name: cifar10
+  n_seq_samples: -1
+  shuffle: false
+environment:
+  data_dir: cifar10logs
+  resume: true
+  world_size: 1
+  rank: 0
+  workers: 40
+  multiprocessing_distributed: false
+  distributed: false
+  dataparallel: true
+  dist_backend: gloo
+  dist_url: tcp://224.66.41.62:23456
+  node: localhost
+  port: 21992
+  seed: 0
+  gpu: 0
+  ngpu: 4
+  mem_gb: 128
+  slurm: false
+  slurm_partition: special
+  slurm_timeout: 360
+  print_freq: ${logging.print_freq}
+  evaluate: false
+  nodelist: ''
+  exclude_nodes: ''
+logging:
+  print_freq: 10
+  save_freq: 1
+  save_freq_mints: 20
+  name: cifar10_colorjitter
+  log_tb: true
+  ckpt_dir: ${environment.data_dir}/checkpoints/${logging.name}/
+  tb_dir: ${environment.data_dir}/tblogs/${logging.name}/
+  submitit_dir: ${environment.data_dir}/submitit_train_logs/${logging.name}/
+  result_dir: ${environment.data_dir}/results/${logging.name}/
+  eval_freq: 5
+  suffix: ''
+  visualize: false
+  retain_num_ckpt: 0
+  use_wandb: false
+  wandb_dir: ${environment.data_dir}/wandb/${logging.name}/
+  wandb_username: senthilps8
+  num_save_crops: 5
+model:
+  backbone:
+    arch: resnet18
+    simsiam_dim: 512
+    pred_dim: 128
+    pretrained: false
+  main_worker: new_worker
+  sync_bn: true
+  num_updates: 4
+  buff_siz: 0
+  buffer_type: none
+  limit_num_seen_coeff: -1
+  pretrained: null
+optim:
+  epochs: 1
+  start_epoch: 0
+  start_batch_idx: 0
+  batch_size: 100
+  lr: 0.05
+  fix_pred_lr: true
+  momentum: 0.9
+  weight_decay: 0.0001
+  lr_schedule:
+    type: cos
+    period: 3000
+    max_lr: 0.003
+    exit_decay: 0.0
+lincls:
+  imnet:
+    data:
+      type: standard
+      train_filelist: /grogu/user/spurushw/datasets/imagenet/trainlist.txt
+      val_filelist: /grogu/user/spurushw/datasets/imagenet/vallist.txt
+      insize: ${data.insize}
+    optim:
+      method: lars
+      epochs: 10
+      start_epoch: 0
+      batch_size: 100
+      normalize: true
+      lr: 3.0
+      momentum: 0.9
+      weight_decay: 0.0
+      schedule:
+      - 60
+      - 80
+      cos: true
+    eval_params:
+      resume_epoch: ${optim.epochs}
+      suffix: .imnet
+      num_classes: 100
+  inat:
+    data:
+      type: standard
+      train_filelist: /grogu/user/spurushw/datasets/inaturalist/trainlist.txt
+      val_filelist: /grogu/user/spurushw/datasets/inaturalist/vallist.txt
+      insize: ${data.insize}
+    optim:
+      method: lars
+      epochs: 20
+      start_epoch: 0
+      batch_size: 1024
+      normalize: true
+      lr: 12.0
+      momentum: 0.9
+      weight_decay: 0.0
+      schedule:
+      - 60
+      - 80
+      cos: true
+    eval_params:
+      resume_epoch: -1
+      suffix: .inat
+      num_classes: 10000

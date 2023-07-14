@@ -1,0 +1,9 @@
+type: 'memmap'
+num_files: 100000
+fn_dtype: "S120"
+base_dir: '/home/subhrangsu/contssl/continuous_ssl_problem/datasets/flickrCC/flickr100k_data'
+train_filelist: '/home/subhrangsu/contssl/continuous_ssl_problem/datasets/flickrCC/flickr-0.1M.memmap'
+val_filelist: ''
+insize: 224
+name: 'flickr100k'
+n_seq_samples: -1
